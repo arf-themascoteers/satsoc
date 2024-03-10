@@ -69,26 +69,7 @@ def process_scene():
         band_pixels = get_band_values(band)
         all_bands_pixels_df = merge_bands(all_bands_pixels_df, band, band_pixels)
 
-    #all_bands_pixels_df = sanitize(all_bands_pixels_df)
     all_bands_pixels_df.to_csv(FINAL_CSV, index=False)
-
-
-def sanitize(df):
-    df = df[
-            (df["B01"]!=0)
-        |   (df["B02"]!=0)
-        |   (df["B03"]!=0)
-        |   (df["B04"]!=0)
-        |   (df["B05"]!=0)
-        |   (df["B06"]!=0)
-        |   (df["B07"]!=0)
-        |   (df["B8A"]!=0)
-        |   (df["B08"]!=0)
-        |   (df["B09"]!=0)
-        |   (df["B11"]!=0)
-        |   (df["B12"]!=0)
-         ]
-    return df
 
 
 if __name__ == "__main__":
