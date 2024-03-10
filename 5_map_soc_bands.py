@@ -3,7 +3,7 @@ import rasterio as rio
 import os
 
 SCENE_PATH = "sat"
-SOURCE_PATH = "IL-BR.csv"
+SOURCE_PATH = "cleaned.csv"
 FINAL_CSV = "final.csv"
 BANDS = ["B01",
          "B02",
