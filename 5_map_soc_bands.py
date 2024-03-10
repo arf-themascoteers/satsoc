@@ -20,58 +20,46 @@ BANDS = ["B01",
          ]
 
 
-def merge_scene(this_csv_path):
-    this_df = pd.read_csv(this_csv_path)
-    if not os.path.exists(FINAL_CSV):
-        complete_df = this_df
-    else:
-        complete_df = pd.read_csv(FINAL_CSV)
-        complete_df = pd.concat([complete_df, this_df], ignore_index=True)
-    complete_df.to_csv(FINAL_CSV, index=False)
-
-
-def find_tiff(tiffs, band):
-    for tiff in tiffs:
+def find_tiff(band):
+    for tiff in os.listdir(SCENE_PATH):
         if band in tiff:
             return tiff
     return None
 
 
-def get_coordinates():
+def get_soc_rows():
     df = pd.read_csv(SOURCE_PATH)
     coordinates = []
     for index, row in df.iterrows():
-        point_id = row["POINTID"]
-        oc = row["OC"]
-        lat = row["TH_LAT"]
-        lon = row["TH_LONG"]
-        coordinates.append((point_id, lat, lon, oc))
+        point_id = row["location_id"]
+        oc = row["SOCc"]
+        lon = row["X"]
+        lat = row["Y"]
+        coordinates.append((point_id, lon, lat, oc))
     return coordinates
 
 
-def get_band_values(scene, band):
-    print(f"Processing {band} for {scene}")
-    the_scene_path = os.path.join(SCENE_PATH, scene)
-    tiffs = os.listdir(the_scene_path)
-    tiff = find_tiff(tiffs, band)
-    tiff_path = os.path.join(the_scene_path, tiff)
-    coordinates = get_coordinates()
+def get_band_values(band):
+    print(f"Processing {band}")
+    tiff = find_tiff(band)
+    tiff_path = os.path.join(SCENE_PATH, tiff)
+    soc_rows = get_soc_rows()
     pixels = []
     with rio.open(tiff_path) as src:
-        for point_id, lat, lon, oc in coordinates:
+        for point_id, lon, lat, oc in soc_rows:
             row, col = src.index(lon, lat)
             pixel_value = src.read(1, window=((row, row + 1), (col, col + 1)))
             if pixel_value.shape[0] != 0 and pixel_value.shape[1] != 0:
-                pixels.append([point_id, lat, lon, oc, pixel_value[0][0]])
+                pixels.append([point_id, oc, pixel_value[0][0]])
     return pixels
 
 
 def merge_bands(all_bands_pixels_df, band, band_pixels):
-    band_df = pd.DataFrame(band_pixels, columns=["X","Y","SOCc",band])
+    band_df = pd.DataFrame(band_pixels, columns=["location_id","SOCc",band])
     if all_bands_pixels_df is None:
         return band_df
-    all_bands_pixels_df = pd.merge(all_bands_pixels_df, band_df[["POINTID",band]], on="POINTID")
-    all_bands_pixels_df.sort_values(by="POINTID", inplace=True)
+    band_df = band_df[["location_id",band]]
+    all_bands_pixels_df = pd.merge(all_bands_pixels_df, band_df, on="location_id")
     return all_bands_pixels_df
 
 
@@ -82,9 +70,7 @@ def process_scene():
         all_bands_pixels_df = merge_bands(all_bands_pixels_df, band, band_pixels)
 
     #all_bands_pixels_df = sanitize(all_bands_pixels_df)
-    this_csv_path = os.path.join(CSVS_PATH, f"{scene}.csv")
-    all_bands_pixels_df.to_csv(this_csv_path, index=False)
-    return this_csv_path
+    all_bands_pixels_df.to_csv(FINAL_CSV, index=False)
 
 
 def sanitize(df):
@@ -103,7 +89,6 @@ def sanitize(df):
         |   (df["B12"]!=0)
          ]
     return df
-
 
 
 if __name__ == "__main__":
